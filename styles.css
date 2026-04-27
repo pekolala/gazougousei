@@ -1,0 +1,346 @@
+:root {
+    --bg-color: #f1f3f5;
+    --panel-bg: #ffffff;
+    --text-main: #343a40;
+    --text-muted: #868e96;
+    --accent: #228be6;
+    --accent-hover: #1c7ed6;
+    --border: #dee2e6;
+    --canvas-bg: #f8f9fa;
+    --success: #2b8a3e;
+    --success-hover: #237032;
+    --active: #20c997;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Inter', "ヒラギノ角ゴ ProN", "Hiragino Kaku Gothic ProN", "メイリオ", Meiryo, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.app-container {
+    width: 100%;
+    max-width: 1400px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+    gap: 5px;
+}
+
+.app-header {
+    margin-bottom: 2px;
+}
+
+.app-header h1 {
+    font-weight: 600;
+    font-size: 1.2rem;
+    color: var(--text-main);
+}
+
+.app-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 15px;
+    flex-grow: 1;
+    min-height: 0;
+}
+
+.panel {
+    background-color: var(--panel-bg);
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+    display: flex;
+    flex-direction: column;
+    padding: 12px;
+    border: 1px solid var(--border);
+}
+
+.left-panel {
+    overflow: hidden;
+}
+
+.right-panels {
+    display: contents; /* Flattens children into the 3-column grid */
+}
+
+.right-top-panel {
+    display: flex;
+    flex-direction: column;
+}
+
+.right-bottom-panel {
+    display: flex;
+    flex-direction: column;
+}
+
+.panel-header {
+    margin-bottom: 6px;
+}
+
+.panel-header h2 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin-bottom: 0px;
+}
+
+.subtitle {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+/* Canvas Areas */
+.canvas-container {
+    position: relative;
+    flex-grow: 1;
+    background: #ffffff; /* White to support transparent eraser */
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    margin-bottom: 8px;
+    aspect-ratio: 1 / 1;
+    max-height: 100%;
+}
+
+.parts-canvas-wrapper {
+    position: relative;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-grow: 1;
+    min-height: 150px;
+    margin-bottom: 8px;
+    /* Checkboard pattern for transparency */
+    background-image: linear-gradient(45deg, #f1f3f5 25%, transparent 25%), 
+                      linear-gradient(-45deg, #f1f3f5 25%, transparent 25%), 
+                      linear-gradient(45deg, transparent 75%, #f1f3f5 75%), 
+                      linear-gradient(-45deg, transparent 75%, #f1f3f5 75%);
+    background-size: 20px 20px;
+    background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+    overflow: hidden;
+}
+
+#partsCanvas {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.drop-zone {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    z-index: 10;
+    transition: background-color 0.2s;
+}
+
+.drop-zone:hover {
+    background-color: rgba(0,0,0,0.02);
+}
+
+.drop-zone input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+/* Hidden state for drop zone once image loaded */
+.drop-zone.hidden {
+    display: none;
+}
+
+#mainCanvas, #previewCanvas {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+}
+
+#mainCanvas {
+    z-index: 1;
+}
+
+#previewCanvas {
+    z-index: 20;
+    pointer-events: none;
+}
+
+/* Make main canvas interactive when eraser is on */
+#mainCanvasContainer.eraser-active #mainCanvas {
+    pointer-events: auto;
+    cursor: crosshair;
+    z-index: 2; /* Still below previewCanvas at 20 */
+}
+
+.parts-canvas-wrapper.eraser-active #partsCanvas {
+    cursor: crosshair;
+}
+
+/* Controls */
+.controls-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-bottom: 4px;
+}
+
+.control-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.flex-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.sub-control {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    margin-left: 8px;
+}
+
+label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-main);
+}
+
+input[type="text"], select {
+    width: 100%;
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 0.9rem;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s;
+    background: #fff;
+    color: var(--text-main);
+}
+
+input[type="text"]:focus, select:focus {
+    border-color: var(--accent);
+}
+
+input[type="range"] {
+    width: 100%;
+    cursor: pointer;
+    accent-color: var(--accent);
+}
+
+/* Buttons */
+button {
+    padding: 6px 10px;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.toggle-btn {
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+}
+.toggle-btn:hover {
+    background-color: #e9ecef;
+}
+.toggle-btn.active {
+    background-color: var(--active);
+    color: #fff;
+    border-color: var(--active);
+}
+
+.primary-btn {
+    background-color: var(--accent);
+    color: white;
+    width: 100%;
+    font-size: 1rem;
+    padding: 12px;
+}
+.primary-btn:hover {
+    background-color: var(--accent-hover);
+}
+
+.action-btn {
+    background-color: var(--success);
+    color: white;
+    width: 100%;
+    padding: 8px;
+    font-size: 1rem;
+    box-shadow: 0 2px 5px rgba(43, 138, 62, 0.2);
+}
+.action-btn:hover {
+    background-color: var(--success-hover);
+}
+
+/* D-Pad */
+.d-pad {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    margin: 2px 0;
+}
+.d-pad-middle {
+    display: flex;
+    gap: 36px; /* space between left and right */
+}
+.arrow-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.2rem;
+    user-select: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+.arrow-btn:active {
+    background-color: #e9ecef;
+    transform: translateY(2px);
+    box-shadow: 0 0 2px rgba(0,0,0,0.02);
+}
+
+.slider-steps {
+    margin-bottom: 2px;
+}

@@ -163,14 +163,6 @@ function init() {
     // Initial Grayscale
     updateGlobalGrayscale();
 
-    // Cleanup Button
-    const cleanupBtn = document.getElementById('cleanupBtn');
-    cleanupBtn.addEventListener('click', () => {
-        if (!originalImage) return;
-        mainMaskCtx.clearRect(0, 0, mainMaskCanvas.width, mainMaskCanvas.height);
-        updateMainRendering();
-    });
-
     // Arrow controls
     setupArrowControls();
 }

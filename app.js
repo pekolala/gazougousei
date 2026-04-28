@@ -50,6 +50,15 @@ let binarizedMainData = null;
 let stampX = 0;
 let stampY = 0;
 
+// History Management
+let historyStack = [];
+let historyIndex = -1;
+const maxHistory = 50;
+let isRestoringHistory = false;
+
+const undoBtn = document.getElementById('undoBtn');
+const redoBtn = document.getElementById('redoBtn');
+
 // Initialization
 function init() {
     // Sync mask size
@@ -69,6 +78,11 @@ function init() {
     imageScaleSlider.addEventListener('input', (e) => {
         imageScaleVal.textContent = e.target.value;
         updateMainImageScale();
+    });
+    
+    // History hooks for sliders
+    [thresholdSlider, imageScaleSlider, thicknessSlider, stampSizeSlider, globalGrayscaleSlider].forEach(s => {
+        s.addEventListener('change', saveHistoryState);
     });
 
     document.addEventListener('paste', handlePaste);
@@ -113,14 +127,11 @@ function init() {
 
     // Text Parts
     textInput.addEventListener('input', updatePartsCanvas);
+    textInput.addEventListener('change', saveHistoryState); // Save on blur/enter
     fontSelect.addEventListener('change', () => {
-        // When text changes, we usually want to clear the mask to avoid weird overlaps
-        // But user might want it to stay. Let's keep it but provide no easy way to clear yet.
-        // Actually, let's clear it if they change the font/text significantly?
-        // No, let's stick to persistence and let them click 'Place' to reset? 
-        // Wait, 'Place' doesn't reset mask.
         updatePartsCanvas();
         updateMainRendering();
+        saveHistoryState();
     });
 
     // Reset mask if text input is cleared? (Optional)
@@ -136,6 +147,7 @@ function init() {
         isSynthesized = true;
         updatePartsCanvas();
         processAndPlaceStamp();
+        saveHistoryState();
     });
     
     globalGrayscaleSlider.addEventListener('input', () => {
@@ -160,11 +172,142 @@ function init() {
     // Save
     saveBmpBtn.addEventListener('click', exportBMP);
 
+    // Save initial state
+    setTimeout(saveHistoryState, 500);
+
     // Initial Grayscale
     updateGlobalGrayscale();
 
+    // Undo/Redo Events
+    undoBtn.addEventListener('click', undo);
+    redoBtn.addEventListener('click', redo);
+    document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.key === 'z') {
+            e.preventDefault();
+            undo();
+        } else if (e.ctrlKey && e.key === 'y') {
+            e.preventDefault();
+            redo();
+        }
+    });
+
     // Arrow controls
     setupArrowControls();
+}
+
+// ----------------------------------------
+// History Logic
+// ----------------------------------------
+async function saveHistoryState() {
+    if (isRestoringHistory) return;
+
+    const state = {
+        threshold: thresholdSlider.value,
+        imageScale: imageScaleSlider.value,
+        mainMask: mainMaskCanvas.toDataURL(),
+        partsMask: partsMaskCanvas.toDataURL(),
+        stampX: stampX,
+        stampY: stampY,
+        stampSize: stampSizeSlider.value,
+        thickness: thicknessSlider.value,
+        text: textInput.value,
+        font: fontSelect.value,
+        isSynthesized: isSynthesized,
+        globalGrayscale: globalGrayscaleSlider.value
+    };
+
+    // Remove future states if we were in the middle of undo
+    if (historyIndex < historyStack.length - 1) {
+        historyStack = historyStack.slice(0, historyIndex + 1);
+    }
+
+    historyStack.push(state);
+    if (historyStack.length > maxHistory) {
+        historyStack.shift();
+    }
+    historyIndex = historyStack.length - 1;
+    updateHistoryButtons();
+}
+
+function updateHistoryButtons() {
+    undoBtn.disabled = historyIndex <= 0;
+    redoBtn.disabled = historyIndex >= historyStack.length - 1;
+}
+
+async function undo() {
+    if (historyIndex > 0) {
+        historyIndex--;
+        await applyHistoryState(historyStack[historyIndex]);
+    }
+}
+
+async function redo() {
+    if (historyIndex < historyStack.length - 1) {
+        historyIndex++;
+        await applyHistoryState(historyStack[historyIndex]);
+    }
+}
+
+async function applyHistoryState(state) {
+    isRestoringHistory = true;
+
+    thresholdSlider.value = state.threshold;
+    thresholdVal.textContent = state.threshold;
+    imageScaleSlider.value = state.imageScale;
+    imageScaleVal.textContent = state.imageScale;
+    stampX = state.stampX;
+    stampY = state.stampY;
+    stampSizeSlider.value = state.stampSize;
+    stampSizeVal.textContent = state.stampSize;
+    thicknessSlider.value = state.thickness;
+    thicknessVal.textContent = state.thickness;
+    textInput.value = state.text;
+    fontSelect.value = state.font;
+    isSynthesized = state.isSynthesized;
+    globalGrayscaleSlider.value = state.globalGrayscale;
+
+    // Restore Global Grayscale Visual
+    const pctValues = [20, 30, 40, 50, 100];
+    const pct = pctValues[parseInt(state.globalGrayscale)];
+    const container = document.getElementById('mainCanvasContainer');
+    if (container) container.style.opacity = pct / 100;
+
+    // Restore masks
+    const restoreMask = (canvas, ctx, dataURL) => {
+        return new Promise(resolve => {
+            const img = new Image();
+            img.onload = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0);
+                resolve();
+            };
+            img.src = dataURL;
+        });
+    };
+
+    // Scale main if needed before mask restoration
+    if (originalImage) {
+        const scale = parseInt(state.imageScale) / 100;
+        mainCanvas.width = Math.floor(originalImage.width * scale);
+        mainCanvas.height = Math.floor(originalImage.height * scale);
+        previewCanvas.width = mainCanvas.width;
+        previewCanvas.height = mainCanvas.height;
+        mainMaskCanvas.width = mainCanvas.width;
+        mainMaskCanvas.height = mainCanvas.height;
+    }
+
+    await Promise.all([
+        restoreMask(mainMaskCanvas, mainMaskCtx, state.mainMask),
+        restoreMask(partsMaskCanvas, partsMaskCtx, state.partsMask)
+    ]);
+
+    // Re-render
+    applyThreshold();
+    updatePartsCanvas();
+    updateMainRendering();
+    
+    isRestoringHistory = false;
+    updateHistoryButtons();
 }
 
 function updateGlobalGrayscale() {
@@ -219,6 +362,7 @@ function loadImage(file) {
             imageScaleVal.textContent = 100;
             updateMainImageScale();
             dropZone.classList.add('hidden');
+            saveHistoryState();
         };
         img.src = e.target.result;
     };
@@ -405,7 +549,10 @@ function setupDrawing(canvas, ctx, isActiveFn, getSizeFn, isMain) {
     });
 
     document.addEventListener('mouseup', () => {
-        isDrawing = false;
+        if (isDrawing) {
+            isDrawing = false;
+            saveHistoryState();
+        }
     });
 }
 
@@ -508,6 +655,7 @@ function setupArrowControls() {
             if (moveInterval) {
                 clearInterval(moveInterval);
                 moveInterval = null;
+                saveHistoryState();
             }
         };
 

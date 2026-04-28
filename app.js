@@ -438,20 +438,16 @@ function applyThreshold() {
 function updateMainRendering() {
     if (!binarizedMainData) return;
     
-    // Apply morphology to the background (it works on alpha)
-    const thickened = applyMorphology(binarizedMainData);
-    
-    // Fill mainCanvas with WHITE first (since background is now transparent in binarizedMainData)
+    // Fill mainCanvas with WHITE first
     mainCtx.fillStyle = '#FFFFFF';
-    mainCtx.fillRect(0, 0, mainCanvas.width, mainCanvas.height);
+    mainCtx.fillRect(0, 0, frameSize, frameSize);
     
     // Put the thickened black lines
-    // We can't use putImageData directly because it overwrites the white background.
-    // So we use a temp canvas to draw it with transparency blending.
     const temp = document.createElement('canvas');
-    temp.width = mainCanvas.width;
-    temp.height = mainCanvas.height;
+    temp.width = frameSize;
+    temp.height = frameSize;
     temp.getContext('2d').putImageData(thickened, 0, 0);
+    
     mainCtx.drawImage(temp, 0, 0);
     
     // Apply persistent mask (eraser)
@@ -703,6 +699,11 @@ async function exportBMP() {
     composite.width = frameSize;
     composite.height = frameSize;
     const compCtx = composite.getContext('2d');
+    
+    // Background must be white here too
+    compCtx.fillStyle = '#FFFFFF';
+    compCtx.fillRect(0, 0, frameSize, frameSize);
+    
     compCtx.drawImage(mainCanvas, 0, 0);
     compCtx.globalCompositeOperation = 'darken';
     compCtx.drawImage(previewCanvas, 0, 0);

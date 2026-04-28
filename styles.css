@@ -141,7 +141,7 @@ body {
 .canvas-container {
     position: relative;
     flex-grow: 1;
-    background: #ffffff; /* White to support transparent eraser */
+    background: transparent; /* Transparent to avoid double-fading when combined with app bg */
     border: 2px dashed var(--border);
     border-radius: 8px;
     display: flex;
@@ -216,6 +216,9 @@ body {
     left: 50%;
     transform: translate(-50%, -50%);
     pointer-events: none;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain;
 }
 
 #mainCanvas {

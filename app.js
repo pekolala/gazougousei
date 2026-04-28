@@ -661,7 +661,7 @@ function renderPreview() {
 // Arrow Controls
 // ----------------------------------------
 function setupArrowControls() {
-    const speed = 5;
+    const speed = 2;
     const btns = {
         'btnUp': {x: 0, y: -speed},
         'btnDown': {x: 0, y: speed},

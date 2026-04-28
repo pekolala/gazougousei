@@ -271,6 +271,20 @@ button {
     font-family: inherit;
 }
 
+.text-action-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+.text-action-btn:hover {
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    border-color: var(--text-muted);
+}
+
 .toggle-btn {
     background-color: var(--bg-color);
     color: var(--text-main);

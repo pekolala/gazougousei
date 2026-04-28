@@ -49,6 +49,7 @@ let partsMaskCtx = partsMaskCanvas.getContext('2d');
 let binarizedMainData = null; 
 let stampX = 0;
 let stampY = 0;
+let frameSize = 1000; // Default, will be updated to Math.max(W, H) of original image
 
 // History Management
 let historyStack = [];
@@ -61,11 +62,11 @@ const redoBtn = document.getElementById('redoBtn');
 
 // Initialization
 function init() {
-    // Sync mask size
+    // Initial size setup
     partsMaskCanvas.width = partsCanvas.width;
     partsMaskCanvas.height = partsCanvas.height;
     
-    updatePartsCanvas(); // Draw initial text
+    updatePartsCanvas(); 
 
     // Event Listeners for Values
     thresholdSlider.addEventListener('input', (e) => {
@@ -285,15 +286,17 @@ async function applyHistoryState(state) {
         });
     };
 
-    // Scale main if needed before mask restoration
+    // Ensure canvases match the square frameSize
     if (originalImage) {
-        const scale = parseInt(state.imageScale) / 100;
-        mainCanvas.width = Math.floor(originalImage.width * scale);
-        mainCanvas.height = Math.floor(originalImage.height * scale);
-        previewCanvas.width = mainCanvas.width;
-        previewCanvas.height = mainCanvas.height;
-        mainMaskCanvas.width = mainCanvas.width;
-        mainMaskCanvas.height = mainCanvas.height;
+        frameSize = Math.max(originalImage.width, originalImage.height);
+        mainCanvas.width = frameSize;
+        mainCanvas.height = frameSize;
+        previewCanvas.width = frameSize;
+        previewCanvas.height = frameSize;
+        mainMaskCanvas.width = frameSize;
+        mainMaskCanvas.height = frameSize;
+        partsMaskCanvas.width = frameSize;
+        partsMaskCanvas.height = frameSize;
     }
 
     await Promise.all([
@@ -353,11 +356,21 @@ function loadImage(file) {
         img.onload = () => {
             originalImage = img;
             
-            // Mask size setup
-            mainMaskCanvas.width = img.width;
-            mainMaskCanvas.height = img.height;
-            mainMaskCtx.clearRect(0, 0, mainMaskCanvas.width, mainMaskCanvas.height);
+            // Frame size setup: always a square based on the larger dimension
+            frameSize = Math.max(img.width, img.height);
             
+            mainMaskCanvas.width = frameSize;
+            mainMaskCanvas.height = frameSize;
+            mainMaskCtx.clearRect(0, 0, frameSize, frameSize);
+
+            partsMaskCanvas.width = frameSize;
+            partsMaskCanvas.height = frameSize;
+            partsMaskCtx.clearRect(0, 0, frameSize, frameSize);
+            
+            // Initial stamp position (center of frame)
+            stampX = frameSize / 2;
+            stampY = frameSize / 2;
+
             imageScaleSlider.value = 100;
             imageScaleVal.textContent = 100;
             updateMainImageScale();
@@ -371,37 +384,33 @@ function loadImage(file) {
 
 function updateMainImageScale() {
     if (!originalImage) return;
-    const scale = parseInt(imageScaleSlider.value) / 100;
-    const newWidth = Math.floor(originalImage.width * scale);
-    const newHeight = Math.floor(originalImage.height * scale);
     
-    mainCanvas.width = newWidth;
-    mainCanvas.height = newHeight;
-    previewCanvas.width = newWidth;
-    previewCanvas.height = newHeight;
-    mainMaskCanvas.width = newWidth;
-    mainMaskCanvas.height = newHeight; // Mask follows scale? Or should it be original? Let's follow scale for simplicity.
+    // Both canvases are now fixed to the square frameSize
+    mainCanvas.width = frameSize;
+    mainCanvas.height = frameSize;
+    previewCanvas.width = frameSize;
+    previewCanvas.height = frameSize;
     
     applyThreshold();
-    
-    // reset position
-    stampX = mainCanvas.width / 2;
-    stampY = mainCanvas.height / 2;
-    
-    if (isSynthesized) {
-        updatePartsCanvas();
-        processAndPlaceStamp();
-    } else {
-        updateMainRendering();
-    }
 }
 
 function applyThreshold() {
     if (!originalImage) return;
-    mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
-    mainCtx.drawImage(originalImage, 0, 0, mainCanvas.width, mainCanvas.height);
     
-    const imgData = mainCtx.getImageData(0, 0, mainCanvas.width, mainCanvas.height);
+    // Clear and draw original image centered and scaled in the square frame
+    const scale = parseInt(imageScaleSlider.value) / 100;
+    const drawW = originalImage.width * scale;
+    const drawH = originalImage.height * scale;
+    const drawX = (frameSize - drawW) / 2;
+    const drawY = (frameSize - drawH) / 2;
+
+    const off = document.createElement('canvas');
+    off.width = frameSize;
+    off.height = frameSize;
+    const octx = off.getContext('2d');
+    octx.drawImage(originalImage, drawX, drawY, drawW, drawH);
+    
+    const imgData = octx.getImageData(0, 0, frameSize, frameSize);
     const data = imgData.data;
     const thresh = parseInt(thresholdSlider.value);
     
@@ -456,25 +465,27 @@ function updateMainRendering() {
 function updatePartsCanvas() {
     const text = textInput.value;
     const font = fontSelect.value;
-    const baseFontSize = 60;
+    
+    // Base font size is now relative to the frameSize
+    const baseFontSize = frameSize * 0.15; 
     const scale = parseInt(stampSizeSlider.value) / 100;
     const fontSize = baseFontSize * scale;
 
-    // Draw to temp for morphology
-    const off = document.createElement('canvas');
-    off.width = partsCanvas.width;
-    off.height = partsCanvas.height;
-    const octx = off.getContext('2d');
+    partsCanvas.width = frameSize;
+    partsCanvas.height = frameSize;
+    const octx = partsCanvas.getContext('2d');
+    octx.clearRect(0, 0, frameSize, frameSize);
+    
     octx.font = `${fontSize}px ${font}`;
     octx.textAlign = 'center';
     octx.textBaseline = 'middle';
     octx.fillStyle = '#000000';
-    octx.fillText(text, off.width/2, off.height/2);
+    octx.fillText(text, frameSize/2, frameSize/2);
 
-    const partsData = octx.getImageData(0, 0, off.width, off.height);
+    const partsData = octx.getImageData(0, 0, frameSize, frameSize);
     const processed = applyMorphology(partsData);
     
-    partsCtx.clearRect(0, 0, partsCanvas.width, partsCanvas.height);
+    partsCtx.clearRect(0, 0, frameSize, frameSize);
     partsCtx.putImageData(processed, 0, 0);
     
     // Apply persistent mask (parts eraser)
@@ -616,12 +627,13 @@ function applyMorphology(imgData) {
 
 function renderPreview() {
     if (!isSynthesized) return;
-    previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+    previewCtx.clearRect(0, 0, frameSize, frameSize);
     
-    const dx = stampX - partsCanvas.width / 2;
-    const dy = stampY - partsCanvas.height / 2;
+    // Since partsCanvas is now a full frame with centered text,
+    // we calculate movement relative to the center.
+    const dx = stampX - frameSize / 2;
+    const dy = stampY - frameSize / 2;
     
-    // Directly draw the current state of partsCanvas onto previewCanvas
     previewCtx.drawImage(partsCanvas, dx, dy);
 }
 
@@ -677,39 +689,33 @@ async function exportBMP() {
         return;
     }
     
-    // Determine square size based on the larger dimension of the original image
-    const S = Math.max(originalImage.width, originalImage.height);
-    
-    // Create combined canvas (The square frame)
+    // The export size is now exactly the frameSize (the square seen in the browser)
     const temp = document.createElement('canvas');
-    temp.width = S;
-    temp.height = S;
+    temp.width = frameSize;
+    temp.height = frameSize;
     const ctx = temp.getContext('2d');
     
     ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(0, 0, S, S);
+    ctx.fillRect(0, 0, frameSize, frameSize);
     
-    // Create a temporary composite of both canvases at full opacity
+    // Create a temporary composite at full opacity
     const composite = document.createElement('canvas');
-    composite.width = mainCanvas.width;
-    composite.height = mainCanvas.height;
+    composite.width = frameSize;
+    composite.height = frameSize;
     const compCtx = composite.getContext('2d');
     compCtx.drawImage(mainCanvas, 0, 0);
     compCtx.globalCompositeOperation = 'darken';
     compCtx.drawImage(previewCanvas, 0, 0);
     compCtx.globalCompositeOperation = 'source-over';
     
-    // Draw the composite centered in the square frame (this handles cropping if scaled up)
-    const offsetX = (S - mainCanvas.width) / 2;
-    const offsetY = (S - mainCanvas.height) / 2;
-    
+    // Final result with global alpha
     const pctValues = [20, 30, 40, 50, 100];
     const pct = pctValues[parseInt(globalGrayscaleSlider.value)];
     ctx.globalAlpha = pct / 100;
-    ctx.drawImage(composite, offsetX, offsetY);
+    ctx.drawImage(composite, 0, 0);
     ctx.globalAlpha = 1.0;
     
-    const finalImgData = ctx.getImageData(0, 0, temp.width, temp.height);
+    const finalImgData = ctx.getImageData(0, 0, frameSize, frameSize);
     const blob = encodeBMP(finalImgData);
     
     // Modern 'Save As' Dialog

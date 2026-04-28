@@ -188,6 +188,7 @@ body {
 #previewCanvas {
     z-index: 20;
     pointer-events: none;
+    mix-blend-mode: darken; /* Prevent darkening when overlapping same colors */
 }
 
 /* Make main canvas interactive when eraser is on */

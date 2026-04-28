@@ -171,8 +171,13 @@ function updateGlobalGrayscale() {
     const pctValues = [20, 30, 40, 50, 100];
     const pct = pctValues[parseInt(globalGrayscaleSlider.value)];
     const factor = pct / 100;
-    mainCanvas.style.opacity = factor;
-    previewCanvas.style.opacity = factor;
+    const container = document.getElementById('mainCanvasContainer');
+    if (container) {
+        container.style.opacity = factor;
+    }
+    // Ensure individual canvases are opaque relative to the container
+    mainCanvas.style.opacity = 1;
+    previewCanvas.style.opacity = 1;
 }
 
 // ----------------------------------------
@@ -533,12 +538,21 @@ async function exportBMP() {
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, temp.width, temp.height);
     
+    // Create a temporary composite of both canvases at full opacity
+    const composite = document.createElement('canvas');
+    composite.width = mainCanvas.width;
+    composite.height = mainCanvas.height;
+    const compCtx = composite.getContext('2d');
+    compCtx.drawImage(mainCanvas, 0, 0);
+    compCtx.globalCompositeOperation = 'darken'; // Use darken to prevent overlap darkening
+    compCtx.drawImage(previewCanvas, 0, 0);
+    compCtx.globalCompositeOperation = 'source-over';
+    
+    // Apply the global alpha to the combined image
     const pctValues = [20, 30, 40, 50, 100];
     const pct = pctValues[parseInt(globalGrayscaleSlider.value)];
     ctx.globalAlpha = pct / 100;
-    
-    ctx.drawImage(mainCanvas, 0, 0);
-    ctx.drawImage(previewCanvas, 0, 0);
+    ctx.drawImage(composite, 0, 0);
     ctx.globalAlpha = 1.0;
     
     const finalImgData = ctx.getImageData(0, 0, temp.width, temp.height);

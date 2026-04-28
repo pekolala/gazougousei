@@ -105,17 +105,37 @@ function init() {
 
     // File Input / Drop
     fileInput.addEventListener('change', handleFileSelect);
-    dropZone.addEventListener('dragover', (e) => {
+    
+    // Global drop handling for convenience
+    window.addEventListener('dragover', (e) => {
         e.preventDefault();
-        dropZone.style.backgroundColor = 'rgba(0,0,0,0.05)';
+        if (e.dataTransfer.types.includes('Files')) {
+            dropZone.classList.remove('hidden');
+            dropZone.style.backgroundColor = 'rgba(0,0,0,0.1)';
+        }
     });
+
     dropZone.addEventListener('dragleave', (e) => {
         e.preventDefault();
+        // Only hide if we have an image
+        if (originalImage) {
+            dropZone.classList.add('hidden');
+        }
         dropZone.style.backgroundColor = '';
     });
+
     dropZone.addEventListener('drop', (e) => {
         e.preventDefault();
         dropZone.style.backgroundColor = '';
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            loadImage(e.dataTransfer.files[0]);
+        }
+    });
+
+    // Also handle drop on the container specifically
+    const mainContainer = document.getElementById('mainCanvasContainer');
+    mainContainer.addEventListener('drop', (e) => {
+        e.preventDefault();
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
             loadImage(e.dataTransfer.files[0]);
         }

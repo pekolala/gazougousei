@@ -529,14 +529,17 @@ async function exportBMP() {
         return;
     }
     
-    // Create combined canvas
+    // Determine square size based on the larger dimension of the original image
+    const S = Math.max(originalImage.width, originalImage.height);
+    
+    // Create combined canvas (The square frame)
     const temp = document.createElement('canvas');
-    temp.width = mainCanvas.width;
-    temp.height = mainCanvas.height;
+    temp.width = S;
+    temp.height = S;
     const ctx = temp.getContext('2d');
     
     ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(0, 0, temp.width, temp.height);
+    ctx.fillRect(0, 0, S, S);
     
     // Create a temporary composite of both canvases at full opacity
     const composite = document.createElement('canvas');
@@ -544,15 +547,18 @@ async function exportBMP() {
     composite.height = mainCanvas.height;
     const compCtx = composite.getContext('2d');
     compCtx.drawImage(mainCanvas, 0, 0);
-    compCtx.globalCompositeOperation = 'darken'; // Use darken to prevent overlap darkening
+    compCtx.globalCompositeOperation = 'darken';
     compCtx.drawImage(previewCanvas, 0, 0);
     compCtx.globalCompositeOperation = 'source-over';
     
-    // Apply the global alpha to the combined image
+    // Draw the composite centered in the square frame (this handles cropping if scaled up)
+    const offsetX = (S - mainCanvas.width) / 2;
+    const offsetY = (S - mainCanvas.height) / 2;
+    
     const pctValues = [20, 30, 40, 50, 100];
     const pct = pctValues[parseInt(globalGrayscaleSlider.value)];
     ctx.globalAlpha = pct / 100;
-    ctx.drawImage(composite, 0, 0);
+    ctx.drawImage(composite, offsetX, offsetY);
     ctx.globalAlpha = 1.0;
     
     const finalImgData = ctx.getImageData(0, 0, temp.width, temp.height);

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +8,7 @@
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
+
 <body>
     <div class="app-container">
         <header class="app-header">
@@ -20,7 +22,7 @@
                 </button>
             </div>
         </header>
-        
+
         <main class="app-grid">
             <!-- Left: Main Image Area -->
             <section class="panel left-panel">
@@ -28,7 +30,7 @@
                     <h2>メイン画像編集</h2>
                     <span class="subtitle">元画像のクリーンアップ</span>
                 </div>
-                
+
                 <div class="canvas-container" id="mainCanvasContainer">
                     <div class="drop-zone" id="dropZone">
                         <p>画像をドラッグ＆ドロップ、クリックで選択、<br>またはクリップボードから貼り付け (Ctrl+V)</p>
@@ -43,17 +45,18 @@
                         <label for="thresholdSlider">背景を消す強さ: <span id="thresholdVal">200</span></label>
                         <input type="range" id="thresholdSlider" min="0" max="255" value="200">
                     </div>
-                    
+
                     <div class="control-item">
                         <label for="imageScaleSlider">基本画像サイズ調整: <span id="imageScaleVal">100</span>%</label>
                         <input type="range" id="imageScaleSlider" min="10" max="300" value="100">
                     </div>
-                    
+
                     <div class="control-item flex-row">
-                        <button id="toggleMainEraser" class="toggle-btn">メイン画像消しゴム: <span class="status">OFF</span></button>
+                        <button id="toggleMainEraser" class="toggle-btn">メイン画像消しゴム: <span
+                                class="status">OFF</span></button>
                         <div class="sub-control">
-                            <label for="mainEraserSize">サイズ: <span id="mainEraserSizeVal">20</span></label>
-                            <input type="range" id="mainEraserSize" min="5" max="100" value="20">
+                            <label for="mainEraserSize">サイズ: <span id="mainEraserSizeVal">50</span></label>
+                            <input type="range" id="mainEraserSize" min="5" max="200" value="50">
                         </div>
                     </div>
                 </div>
@@ -81,8 +84,8 @@
                             </select>
                         </div>
                         <div class="control-item">
-                            <label for="stampSizeSlider">部品サイズ: <span id="stampSizeVal">100</span>%</label>
-                            <input type="range" id="stampSizeSlider" min="10" max="300" value="100">
+                            <label for="stampSizeSlider">部品サイズ: <span id="stampSizeVal">150</span>%</label>
+                            <input type="range" id="stampSizeSlider" min="10" max="300" value="150">
                         </div>
                     </div>
 
@@ -92,10 +95,11 @@
 
                     <div class="controls-group">
                         <div class="control-item flex-row">
-                            <button id="togglePartsEraser" class="toggle-btn">透過消しゴム: <span class="status">OFF</span></button>
+                            <button id="togglePartsEraser" class="toggle-btn">透過消しゴム: <span
+                                    class="status">OFF</span></button>
                             <div class="sub-control">
-                                <label for="partsEraserSize">サイズ: <span id="partsEraserSizeVal">10</span></label>
-                                <input type="range" id="partsEraserSize" min="2" max="50" value="10">
+                                <label for="partsEraserSize">サイズ: <span id="partsEraserSizeVal">30</span></label>
+                                <input type="range" id="partsEraserSize" min="2" max="100" value="30">
                             </div>
                         </div>
                     </div>
@@ -110,7 +114,7 @@
 
                     <div class="controls-group synthesis-controls">
                         <button id="synthesizeBtn" class="primary-btn">部品を配置 / 更新</button>
-                        
+
                         <div class="d-pad">
                             <button class="arrow-btn up" id="btnUp">▲</button>
                             <div class="d-pad-middle">
@@ -124,7 +128,8 @@
 
                     <div class="controls-group">
                         <div class="control-item slider-steps">
-                            <label for="globalGrayscaleSlider">全体の濃さ (グレースケール): <span id="globalGrayscaleVal">100</span>%</label>
+                            <label for="globalGrayscaleSlider">全体の濃さ (グレースケール): <span
+                                    id="globalGrayscaleVal">100</span>%</label>
                             <input type="range" id="globalGrayscaleSlider" min="0" max="4" value="4" step="1">
                         </div>
                         <div class="control-item slider-steps">
@@ -142,4 +147,5 @@
     </div>
     <script src="app.js"></script>
 </body>
+
 </html>

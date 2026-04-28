@@ -42,11 +42,11 @@ let mainEraserActive = false;
 let partsEraserActive = false;
 let isSynthesized = false; // Flag to show it on main preview
 let moveInterval = null;
-let mainMaskCanvas = document.createElement('canvas'); 
+let mainMaskCanvas = document.createElement('canvas');
 let mainMaskCtx = mainMaskCanvas.getContext('2d');
 let partsMaskCanvas = document.createElement('canvas'); // Persistent eraser for parts
 let partsMaskCtx = partsMaskCanvas.getContext('2d');
-let binarizedMainData = null; 
+let binarizedMainData = null;
 let stampX = 0;
 let stampY = 0;
 let frameSize = 1000; // Default, will be updated to Math.max(W, H) of original image
@@ -65,8 +65,8 @@ function init() {
     // Initial size setup
     partsMaskCanvas.width = partsCanvas.width;
     partsMaskCanvas.height = partsCanvas.height;
-    
-    updatePartsCanvas(); 
+
+    updatePartsCanvas();
 
     // Event Listeners for Values
     thresholdSlider.addEventListener('input', (e) => {
@@ -75,19 +75,19 @@ function init() {
     });
     mainEraserSize.addEventListener('input', (e) => mainEraserSizeVal.textContent = e.target.value);
     partsEraserSize.addEventListener('input', (e) => partsEraserSizeVal.textContent = e.target.value);
-    
+
     imageScaleSlider.addEventListener('input', (e) => {
         imageScaleVal.textContent = e.target.value;
         updateMainImageScale();
     });
-    
+
     // History hooks for sliders
     [thresholdSlider, imageScaleSlider, thicknessSlider, stampSizeSlider, globalGrayscaleSlider].forEach(s => {
         s.addEventListener('change', saveHistoryState);
     });
 
     document.addEventListener('paste', handlePaste);
-    
+
     // Toggles
     toggleMainEraserBtn.addEventListener('click', () => {
         mainEraserActive = !mainEraserActive;
@@ -105,7 +105,7 @@ function init() {
 
     // File Input / Drop
     fileInput.addEventListener('change', handleFileSelect);
-    
+
     // Global drop handling for convenience
     window.addEventListener('dragover', (e) => {
         e.preventDefault();
@@ -171,14 +171,14 @@ function init() {
         processAndPlaceStamp();
         saveHistoryState();
     });
-    
+
     globalGrayscaleSlider.addEventListener('input', () => {
         const pctValues = [20, 30, 40, 50, 100];
         const pct = pctValues[parseInt(globalGrayscaleSlider.value)];
         globalGrayscaleVal.textContent = pct;
         updateGlobalGrayscale();
     });
-    
+
     thicknessSlider.addEventListener('input', () => {
         thicknessVal.textContent = thicknessSlider.value;
         updatePartsCanvas();
@@ -329,7 +329,7 @@ async function applyHistoryState(state) {
     applyThreshold();
     updatePartsCanvas();
     updateMainRendering();
-    
+
     isRestoringHistory = false;
     updateHistoryButtons();
 }
@@ -376,10 +376,10 @@ function loadImage(file) {
         const img = new Image();
         img.onload = () => {
             originalImage = img;
-            
+
             // Frame size setup: always a square based on the larger dimension
             frameSize = Math.max(img.width, img.height);
-            
+
             mainMaskCanvas.width = frameSize;
             mainMaskCanvas.height = frameSize;
             mainMaskCtx.clearRect(0, 0, frameSize, frameSize);
@@ -387,7 +387,7 @@ function loadImage(file) {
             partsMaskCanvas.width = frameSize;
             partsMaskCanvas.height = frameSize;
             partsMaskCtx.clearRect(0, 0, frameSize, frameSize);
-            
+
             // Initial stamp position (center of frame)
             stampX = frameSize / 2;
             stampY = frameSize / 2;
@@ -405,19 +405,19 @@ function loadImage(file) {
 
 function updateMainImageScale() {
     if (!originalImage) return;
-    
+
     // Both canvases are now fixed to the square frameSize
     mainCanvas.width = frameSize;
     mainCanvas.height = frameSize;
     previewCanvas.width = frameSize;
     previewCanvas.height = frameSize;
-    
+
     applyThreshold();
 }
 
 function applyThreshold() {
     if (!originalImage) return;
-    
+
     // Clear and draw original image centered and scaled in the square frame
     const scale = parseInt(imageScaleSlider.value) / 100;
     const drawW = originalImage.width * scale;
@@ -430,26 +430,26 @@ function applyThreshold() {
     off.height = frameSize;
     const octx = off.getContext('2d');
     octx.drawImage(originalImage, drawX, drawY, drawW, drawH);
-    
+
     const imgData = octx.getImageData(0, 0, frameSize, frameSize);
     const data = imgData.data;
     const thresh = parseInt(thresholdSlider.value);
-    
+
     for (let i = 0; i < data.length; i += 4) {
         const r = data[i];
-        const g = data[i+1];
-        const b = data[i+2];
+        const g = data[i + 1];
+        const b = data[i + 2];
         const brightness = Math.max(r, g, b); // simple brightness
         if (brightness >= thresh) {
             data[i] = 255;
-            data[i+1] = 255;
-            data[i+2] = 255;
-            data[i+3] = 0; // Transparent (Background)
+            data[i + 1] = 255;
+            data[i + 2] = 255;
+            data[i + 3] = 0; // Transparent (Background)
         } else {
             data[i] = 0;
-            data[i+1] = 0;
-            data[i+2] = 0;
-            data[i+3] = 255; // Opaque (Line)
+            data[i + 1] = 0;
+            data[i + 2] = 0;
+            data[i + 3] = 255; // Opaque (Line)
         }
     }
     binarizedMainData = imgData;
@@ -458,36 +458,36 @@ function applyThreshold() {
 
 function updateMainRendering() {
     if (!binarizedMainData) return;
-    
+
     // Apply morphology to the background (it works on alpha)
     const thickened = applyMorphology(binarizedMainData);
-    
+
     // Fill mainCanvas with WHITE first
     mainCtx.fillStyle = '#FFFFFF';
     mainCtx.fillRect(0, 0, frameSize, frameSize);
-    
+
     // Put the thickened black lines
     const temp = document.createElement('canvas');
     temp.width = frameSize;
     temp.height = frameSize;
     temp.getContext('2d').putImageData(thickened, 0, 0);
-    
+
     mainCtx.drawImage(temp, 0, 0);
-    
+
     // Apply persistent mask (eraser)
     mainCtx.globalCompositeOperation = 'destination-out';
     mainCtx.drawImage(mainMaskCanvas, 0, 0);
     mainCtx.globalCompositeOperation = 'source-over';
-    
+
     renderPreview();
 }
 
 function updatePartsCanvas() {
     const text = textInput.value;
     const font = fontSelect.value;
-    
+
     // Base font size is now relative to the frameSize
-    const baseFontSize = frameSize * 0.15; 
+    const baseFontSize = frameSize * 1.0;
     const scale = parseInt(stampSizeSlider.value) / 100;
     const fontSize = baseFontSize * scale;
 
@@ -495,19 +495,19 @@ function updatePartsCanvas() {
     partsCanvas.height = frameSize;
     const octx = partsCanvas.getContext('2d');
     octx.clearRect(0, 0, frameSize, frameSize);
-    
+
     octx.font = `${fontSize}px ${font}`;
     octx.textAlign = 'center';
     octx.textBaseline = 'middle';
     octx.fillStyle = '#000000';
-    octx.fillText(text, frameSize/2, frameSize/2);
+    octx.fillText(text, frameSize / 2, frameSize / 2);
 
     const partsData = octx.getImageData(0, 0, frameSize, frameSize);
     const processed = applyMorphology(partsData);
-    
+
     partsCtx.clearRect(0, 0, frameSize, frameSize);
     partsCtx.putImageData(processed, 0, 0);
-    
+
     // Apply persistent mask (parts eraser)
     partsCtx.globalCompositeOperation = 'destination-out';
     partsCtx.drawImage(partsMaskCanvas, 0, 0);
@@ -545,7 +545,7 @@ function setupDrawing(canvas, ctx, isActiveFn, getSizeFn, isMain) {
     canvas.addEventListener('mousemove', (e) => {
         if (!isDrawing || !isActiveFn()) return;
         const currentPos = getMousePos(canvas, e);
-        
+
         ctx.beginPath();
         if (isMain) {
             // Draw on the persistent mask canvas instead
@@ -557,7 +557,7 @@ function setupDrawing(canvas, ctx, isActiveFn, getSizeFn, isMain) {
             mainMaskCtx.moveTo(lastPos.x, lastPos.y);
             mainMaskCtx.lineTo(currentPos.x, currentPos.y);
             mainMaskCtx.stroke();
-            
+
             // Immediately apply visual feedback
             updateMainRendering();
         } else {
@@ -570,12 +570,12 @@ function setupDrawing(canvas, ctx, isActiveFn, getSizeFn, isMain) {
             partsMaskCtx.moveTo(lastPos.x, lastPos.y);
             partsMaskCtx.lineTo(currentPos.x, currentPos.y);
             partsMaskCtx.stroke();
-            
+
             // Immediately apply to parts preview
             updatePartsCanvas();
             if (isSynthesized) renderPreview();
         }
-        
+
         lastPos = currentPos;
     });
 
@@ -598,22 +598,22 @@ function processAndPlaceStamp() {
 function applyMorphology(imgData) {
     const thickness = parseInt(thicknessSlider.value); // 1 to 5
     if (thickness === 3) return imgData; // Normal
-    
+
     // Increased power for very obvious changes
     let step = Math.abs(thickness - 3);
     let iterations = step * 3; // 3 iterations per level
     let type = thickness > 3 ? 1 : -1; // 1: Dilation, -1: Erosion
-    
+
     let w = imgData.width;
     let h = imgData.height;
     let currentData = new Uint8ClampedArray(imgData.data);
-    
+
     for (let iter = 0; iter < iterations; iter++) {
         let newData = new Uint8ClampedArray(currentData.length);
         for (let y = 0; y < h; y++) {
             for (let x = 0; x < w; x++) {
                 let extremeA = (type === 1) ? 0 : 255;
-                
+
                 // Square 3x3 block check
                 for (let ky = -1; ky <= 1; ky++) {
                     for (let kx = -1; kx <= 1; kx++) {
@@ -625,35 +625,35 @@ function applyMorphology(imgData) {
                         } else if (type === -1) {
                             // Erosion at border should shrink
                             extremeA = 0;
-                            break; 
+                            break;
                         }
                     }
                     if (type === -1 && extremeA === 0) break;
                 }
-                
+
                 let idx = (y * w + x) * 4;
                 // Keep color black (0,0,0) as per spec for parts
                 newData[idx] = 0;
-                newData[idx+1] = 0;
-                newData[idx+2] = 0;
-                newData[idx+3] = extremeA;
+                newData[idx + 1] = 0;
+                newData[idx + 2] = 0;
+                newData[idx + 3] = extremeA;
             }
         }
         currentData = newData;
     }
-    
+
     return new ImageData(currentData, w, h);
 }
 
 function renderPreview() {
     if (!isSynthesized) return;
     previewCtx.clearRect(0, 0, frameSize, frameSize);
-    
+
     // Since partsCanvas is now a full frame with centered text,
     // we calculate movement relative to the center.
     const dx = stampX - frameSize / 2;
     const dy = stampY - frameSize / 2;
-    
+
     previewCtx.drawImage(partsCanvas, dx, dy);
 }
 
@@ -663,18 +663,18 @@ function renderPreview() {
 function setupArrowControls() {
     const speed = 2;
     const btns = {
-        'btnUp': {x: 0, y: -speed},
-        'btnDown': {x: 0, y: speed},
-        'btnLeft': {x: -speed, y: 0},
-        'btnRight': {x: speed, y: 0}
+        'btnUp': { x: 0, y: -speed },
+        'btnDown': { x: 0, y: speed },
+        'btnLeft': { x: -speed, y: 0 },
+        'btnRight': { x: speed, y: 0 }
     };
 
     for (let id in btns) {
         const btn = document.getElementById(id);
-        
+
         const startMove = (e) => {
             e.preventDefault();
-            if(!isSynthesized) return;
+            if (!isSynthesized) return;
             if (moveInterval) clearInterval(moveInterval);
             moveInterval = setInterval(() => {
                 stampX += btns[id].x;
@@ -682,7 +682,7 @@ function setupArrowControls() {
                 renderPreview();
             }, 30);
         };
-        
+
         const stopMove = () => {
             if (moveInterval) {
                 clearInterval(moveInterval);
@@ -692,8 +692,8 @@ function setupArrowControls() {
         };
 
         btn.addEventListener('mousedown', startMove);
-        btn.addEventListener('touchstart', startMove, {passive: false});
-        
+        btn.addEventListener('touchstart', startMove, { passive: false });
+
         btn.addEventListener('mouseup', stopMove);
         btn.addEventListener('mouseleave', stopMove);
         btn.addEventListener('touchend', stopMove);
@@ -708,41 +708,41 @@ async function exportBMP() {
         alert("画像が読み込まれていません。");
         return;
     }
-    
+
     // The export size is now exactly the frameSize (the square seen in the browser)
     const temp = document.createElement('canvas');
     temp.width = frameSize;
     temp.height = frameSize;
     const ctx = temp.getContext('2d');
-    
+
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, frameSize, frameSize);
-    
+
     // Create a temporary composite at full opacity
     const composite = document.createElement('canvas');
     composite.width = frameSize;
     composite.height = frameSize;
     const compCtx = composite.getContext('2d');
-    
+
     // Background must be white here too
     compCtx.fillStyle = '#FFFFFF';
     compCtx.fillRect(0, 0, frameSize, frameSize);
-    
+
     compCtx.drawImage(mainCanvas, 0, 0);
     compCtx.globalCompositeOperation = 'darken';
     compCtx.drawImage(previewCanvas, 0, 0);
     compCtx.globalCompositeOperation = 'source-over';
-    
+
     // Final result with global alpha
     const pctValues = [20, 30, 40, 50, 100];
     const pct = pctValues[parseInt(globalGrayscaleSlider.value)];
     ctx.globalAlpha = pct / 100;
     ctx.drawImage(composite, 0, 0);
     ctx.globalAlpha = 1.0;
-    
+
     const finalImgData = ctx.getImageData(0, 0, frameSize, frameSize);
     const blob = encodeBMP(finalImgData);
-    
+
     // Modern 'Save As' Dialog
     if ('showSaveFilePicker' in window) {
         try {
@@ -750,7 +750,7 @@ async function exportBMP() {
                 suggestedName: `synthesized_${Date.now()}.bmp`,
                 types: [{
                     description: 'BMP Image',
-                    accept: {'image/bmp': ['.bmp']},
+                    accept: { 'image/bmp': ['.bmp'] },
                 }],
             });
             const writable = await handle.createWritable();
@@ -779,22 +779,22 @@ function encodeBMP(imageData) {
     const width = imageData.width;
     const height = imageData.height;
     const data = imageData.data;
-    
+
     const rowSize = Math.floor((24 * width + 31) / 32) * 4;
     const pixelArraySize = rowSize * height;
     const fileSize = 54 + pixelArraySize;
-    
+
     const buffer = new ArrayBuffer(fileSize);
     const view = new DataView(buffer);
-    
+
     // Header
     view.setUint16(0, 0x424D, false); // BM (Magic Number)
     view.setUint32(2, fileSize, true);
     view.setUint32(6, 0, true);
     view.setUint32(10, 54, true); // Offset
-    
+
     // DIB Header
-    view.setUint32(14, 40, true); 
+    view.setUint32(14, 40, true);
     view.setInt32(18, width, true);
     view.setInt32(22, height, true); // Positive height for classic Bottom-Up
     view.setUint16(26, 1, true);
@@ -802,10 +802,10 @@ function encodeBMP(imageData) {
     view.setUint32(30, 0, true);
     view.setUint32(34, pixelArraySize, true);
     view.setInt32(38, 0, true); // 0 for compatibility
-    view.setInt32(42, 0, true); 
+    view.setInt32(42, 0, true);
     view.setUint32(46, 0, true);
     view.setUint32(50, 0, true);
-    
+
     let offset = 54;
     for (let y = 0; y < height; y++) {
         // BMP lines are stored bottom-to-top
@@ -814,22 +814,22 @@ function encodeBMP(imageData) {
         for (let x = 0; x < width; x++) {
             let p = (sourceY * width + x) * 4;
             let r = data[p];
-            let g = data[p+1];
-            let b = data[p+2];
-            let a = data[p+3] / 255;
-            
+            let g = data[p + 1];
+            let b = data[p + 2];
+            let a = data[p + 3] / 255;
+
             // Blend with white if transparent
             let outB = Math.round(b * a + 255 * (1 - a));
             let outG = Math.round(g * a + 255 * (1 - a));
             let outR = Math.round(r * a + 255 * (1 - a));
-            
+
             view.setUint8(rowStart + x * 3, outB);
             view.setUint8(rowStart + x * 3 + 1, outG);
             view.setUint8(rowStart + x * 3 + 2, outR);
         }
         // Padding bytes in rowSize are already 0 by ArrayBuffer init
     }
-    
+
     return new Blob([buffer], { type: "image/bmp" });
 }
 

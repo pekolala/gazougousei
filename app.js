@@ -134,6 +134,7 @@ function init() {
 
     // Also handle drop on the container specifically
     const mainContainer = document.getElementById('mainCanvasContainer');
+    mainContainer.addEventListener('dragover', (e) => e.preventDefault()); // MUST prevent default for drop to work
     mainContainer.addEventListener('drop', (e) => {
         e.preventDefault();
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
@@ -457,6 +458,9 @@ function applyThreshold() {
 
 function updateMainRendering() {
     if (!binarizedMainData) return;
+    
+    // Apply morphology to the background (it works on alpha)
+    const thickened = applyMorphology(binarizedMainData);
     
     // Fill mainCanvas with WHITE first
     mainCtx.fillStyle = '#FFFFFF';

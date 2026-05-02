@@ -413,6 +413,7 @@ function updateMainImageScale() {
     previewCanvas.height = frameSize;
 
     applyThreshold();
+    updatePartsCanvas();
 }
 
 function applyThreshold() {
